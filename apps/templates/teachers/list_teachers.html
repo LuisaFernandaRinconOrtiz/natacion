@@ -1,0 +1,390 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Lista de Profesores {% endblock %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+<!-- [ Main Content ] start -->
+<div class="pcoded-main-container">
+    <div class="pcoded-wrapper">
+        <div class="pcoded-content">
+            <div class="pcoded-inner-content">
+                <!-- [ breadcrumb ] start -->
+                <div class="page-header">
+                    <div class="page-block">
+                        <!-- <div class="row align-items-center">
+                                <div class="col-md-12">
+                                    <div class="page-header-title">
+                                        <h5 class="m-b-10">Sample Page</h5>
+                                    </div>
+                                    <ul class="breadcrumb">
+                                        <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                        <li class="breadcrumb-item"><a href="javascript:">Sample Page</a></li>
+                                    </ul>
+                                </div>
+                            </div> -->
+                    </div>
+                </div>
+                <!-- [ breadcrumb ] end -->
+                <div class="main-body">
+                    <div class="page-wrapper">
+                        <!-- [ Main Content ] start -->
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <div class="table-responsive">
+                                    <button onclick="addClient()" class="btn btn-success">Agregar Profesor</button>
+
+                                    <table id="miTabla" class="display responsive nowrap" width="100%">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Nombres</th>
+                                                <th>Apellidos</th>
+                                                <th>Documento</th>
+                                                <th>Telefono</th>
+                                                <th>Años experiencia</th>
+                                                <th>Estado</th>
+                                                <th>Accion</th>
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- [ Main Content ] end -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- [ Main Content ] end -->
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+
+
+<script>
+    $(document).ready(function () {
+
+        $('#miTabla thead tr')
+            .clone(true)
+            .addClass('filters')
+            .appendTo('#miTabla thead');
+
+        var table = $('#miTabla').DataTable({
+
+            "ajax": {
+                "url": "{{ url_for('teachers_blueprint.dataTeachers') }}",
+                "dataType": "json",
+            },
+
+            // Ruta para cargar los datos a través de AJAX
+            "columns": [
+                { "data": "id" },
+                { "data": "names" },
+                { "data": "surnames" },
+                { "data": "document" },
+                { "data": "phone" },
+                { "data": "experience_years" },
+                { "data": "state" },
+
+                {
+                    "data": "id",
+                    "render": function (data, type, row) {
+
+                        var buttonsHtml = '<div class="buttonsWrapper">';
+                            buttonsHtml += '<a href="#" data-id="' + data + '" class="editClient btn btn-primary">Editar</a>';
+
+                         if(row.state == "desactivado"){
+                        buttonsHtml += '<a href="#" data-id="' + data + '"  data-state="' + 1 + '" class="stateClient btn btn-success">Activar</a>';
+                         }
+                         else{
+                            buttonsHtml += '<a href="#" data-id="' + data + '"   data-state="' + 0 + '" class="stateClient btn btn-danger">Desactivar</a>';
+
+                         }
+                        buttonsHtml += '</div>';
+                        return buttonsHtml;
+                    }
+                }
+            ],
+            "responsive": true, // Enable responsive feature
+            "orderCellsTop": true,
+            "fixedHeader": true,
+            dom: 'Bfrtip',
+            buttons: [
+                'excel'
+            ],
+
+            "initComplete": function () {
+                var api = this.api();
+
+                // For each column
+                api
+                    .columns()
+                    .eq(0)
+                    .each(function (colIdx) {
+                        // Set the header cell to contain the input element
+                        var cell = $('.filters th').eq(
+                            $(api.column(colIdx).header()).index()
+                        );
+                        var title = $(cell).text();
+                        $(cell).html('<input type="text" placeholder="' + title + '" />');
+
+                        // On every keypress in this input
+                        $(
+                            'input',
+                            $('.filters th').eq($(api.column(colIdx).header()).index())
+                        )
+                            .off('keyup change')
+                            .on('change', function (e) {
+                                // Get the search value
+                                $(this).attr('title', $(this).val());
+                                var regexr = '({search})'; //$(this).parents('th').find('select').val();
+
+                                var cursorPosition = this.selectionStart;
+                                // Search the column for that value
+                                api
+                                    .column(colIdx)
+                                    .search(
+                                        this.value != ''
+                                            ? regexr.replace('{search}', '(((' + this.value + ')))')
+                                            : '',
+                                        this.value != '',
+                                        this.value == ''
+                                    )
+                                    .draw();
+                            })
+                            .on('keyup', function (e) {
+                                e.stopPropagation();
+
+                                $(this).trigger('change');
+                                $(this)
+                                    .focus()[0]
+                                    .setSelectionRange(cursorPosition, cursorPosition);
+                            });
+                    });
+            },
+
+        });
+
+
+    });
+
+
+
+    function addClient() {
+        Swal.fire({
+            title: 'Ingrese los datos del profesor:',
+            html: `
+            <input id="first_name" class="swal2-input" placeholder="Primer nombre" >
+            <input id="second_name" class="swal2-input" placeholder="Segundo nombre (Opcional)" >
+            <input id="first_last_name" class="swal2-input" placeholder="Primer apellido" >
+            <input id="second_last_name" class="swal2-input" placeholder="Segundo apellido (Opcional)" >
+            <input id="dni" class="swal2-input" placeholder="Identificacion (Opcional)" >
+            <input id="phone" class="swal2-input" placeholder="Telefono " >
+            <input id="experience" class="swal2-input" placeholder="experiencia " >
+            
+          `,
+            showCancelButton: true,
+            confirmButtonText: 'Enviar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const first_name = document.getElementById('first_name').value;
+                const second_name = document.getElementById('second_name').value;
+                const first_last_name = document.getElementById('first_last_name').value;
+                const second_last_name = document.getElementById('second_last_name').value;
+                const dni = document.getElementById('dni').value;
+                const phone = document.getElementById('phone').value;
+                const experience = document.getElementById('experience').value;
+
+
+                if (!first_name) {
+                    Swal.showValidationMessage('Por favor, complete el primer nombre del cliente');
+                }
+                if (!first_last_name) {
+                    Swal.showValidationMessage('Por favor, complete el primer apellido del cliente');
+                }
+                if (!phone) {
+                    Swal.showValidationMessage('Por favor, complete el telefono del cliente');
+                }
+
+                return { first_name, second_name, first_last_name, second_last_name, dni, phone,experience };
+            },
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Enviar datos mediante una solicitud POST a tu ruta correspondiente
+                enviarDatosEnvio(result.value);
+            }
+        });
+    }
+
+    // Función para enviar los datos mediante POST
+    function enviarDatosEnvio(datos) {
+        fetch("{{ url_for('teachers_blueprint.create_teacher') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(datos),
+        })
+            .then(response => response.json())
+            .then(data => {
+                Swal.fire({
+                    title: data.message,
+                    icon: data.tipo
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.reload();
+                    }
+                });
+            })
+            .catch(error => {
+                Swal.fire({
+                    title: "Error al crear el cliente",
+                    icon: "error"
+                }).then(() => {
+                    window.location.reload();
+                });
+
+            });
+    }
+
+    $(document).on('click', '.editClient', function () {
+        var id = $(this).data('id');
+
+        // Hacer una solicitud AJAX para obtener los datos del tipo de envío
+        fetch("{{ url_for('teachers_blueprint.get_teacher', id='') }}/" + id)  // Aquí concatenamos el id directamente
+            .then(response => response.json())
+            .then(data => {
+                // Mostrar el cuadro de diálogo de edición con los datos obtenidos
+                mostrarCuadroDialogoEdicion(data, id);
+            })
+            .catch(error => {
+                console.error('Error al obtener datos del cliente', error);
+            });
+
+
+    });
+
+    function mostrarCuadroDialogoEdicion(dataClient, id) {
+        Swal.fire({
+            title: 'Ingrese los datos del cliente:',
+            html: `
+            <input id="first_name" class="swal2-input" placeholder="Primer nombre" value="${dataClient.first_name}" >
+            <input id="second_name" class="swal2-input" placeholder="Segundo nombre (Opcional)" value="${dataClient.second_name}">
+            <input id="first_last_name" class="swal2-input" placeholder="Primer apellido" value="${dataClient.first_last_name}">
+            <input id="second_last_name" class="swal2-input" placeholder="Segundo apellido (Opcional)"value="${dataClient.second_last_name}">
+            <input id="dni" class="swal2-input" placeholder="Identificacion (Opcional)" value="${dataClient.dni}">
+            <input id="phone" class="swal2-input" placeholder="Telefono " value="${dataClient.phone}">
+            <input id="experience" class="swal2-input" placeholder="experiencia" value="${dataClient.experience_years}"    >
+
+  
+          `,
+            showCancelButton: true,
+            confirmButtonText: 'Enviar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const first_name = document.getElementById('first_name').value;
+                const second_name = document.getElementById('second_name').value;
+                const first_last_name = document.getElementById('first_last_name').value;
+                const second_last_name = document.getElementById('second_last_name').value;
+                const dni = document.getElementById('dni').value;
+                const phone = document.getElementById('phone').value;
+                const experience_years = document.getElementById('experience').value;
+
+
+                if (!first_name) {
+                    Swal.showValidationMessage('Por favor, complete el primer nombre del cliente');
+                }
+                if (!first_last_name) {
+                    Swal.showValidationMessage('Por favor, complete el primer apellido del cliente');
+                }
+                if (!phone) {
+                    Swal.showValidationMessage('Por favor, complete el telefono del cliente');
+                }
+
+                return { first_name, second_name, first_last_name, second_last_name, dni, phone,experience_years };
+            },
+
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Incluye el id en el objeto result.value antes de enviar la solicitud fetch
+                result.value.id = id;
+
+                fetch("{{ url_for('teachers_blueprint.edit_teacher') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(result.value),
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        Swal.fire({
+                            title: "Envio editado correctamente",
+                            icon: "success"
+                        });
+                        window.location.reload()
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            title: "Error al editar el envio",
+                            icon: "error"
+                        });
+                        window.location.reload()
+
+                    });
+            }
+        });
+    }
+
+    $(document).on('click', '.stateClient', function () {
+        var id = $(this).data('id');
+        var state = $(this).data('state');
+        var type_state =""
+        if(state ==0)
+        {
+            type_state = "desactivar"
+        }
+        else{
+            type_state = "activar"
+ 
+        }
+        Swal.fire({
+            title: "Desea "+type_state + " el profesor",
+            showCancelButton: true,
+            confirmButtonText: 'CONFIRMAR',
+        }).then((result) => {
+            /* Read more about isConfirmed, isDenied below */
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "{{ url_for('teachers_blueprint.edit_state_teacher') }}",
+                    type: 'post',
+                    data: { id: id, state: state },
+                    success: function (data) {
+                        Swal.fire({
+                            title: data.message,
+                            icon: data.tipo
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.reload();
+                            }
+                        });
+                    }
+                });
+
+            }
+        })
+    });
+
+
+</script>
+{% endblock javascripts %}

@@ -1,0 +1,319 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Calendario de Clases de Natación {% endblock %}
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<style>
+    .fc-event { cursor: pointer; }
+    #calendar { background-color: white; border-radius: 10px; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .fc-toolbar-title { font-size: 1.5em; }
+    .fc-event-past { opacity: 0.7; }
+    .fc-event-completada { 
+        background-color: #218838;  /* Verde más oscuro para mejor contraste */
+        border-color: #1e7e34;
+        color: #ffffff;  /* Texto blanco para mejor legibilidad */
+    }
+    
+    .fc-event-cancelada { 
+        background-color: #c82333; /* Rojo más intenso */
+        border-color: #bd2130;
+        color: #ffffff;  
+    }
+    
+    .fc-event-pendiente { 
+        background-color: #138496; /* Azul más fuerte */
+        border-color: #117a8b;
+        color: #ffffff;  
+    }
+    
+    .select2-container { width: 100% !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pcoded-main-container">
+    <div class="pcoded-wrapper">
+        <div class="pcoded-content">
+            <div class="pcoded-inner-content">
+                <div class="main-body">
+                    <div class="page-wrapper">
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5>Calendario de Clases de Natación</h5>
+                                        <!-- <button id="addClassBtn" class="btn btn-primary">
+                                            <i class="fas fa-plus"></i> Nueva Clase
+                                        </button> -->
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="calendar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para clases -->
+<div class="modal fade" id="classModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Nueva Clase de Natación</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="classForm">
+                    <input type="hidden" id="classId">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="studentSelect">Estudiante</label>
+                            <select id="studentSelect" class="form-control select2" required></select>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="teacherSelect">Instructor</label>
+                            <select id="teacherSelect" class="form-control select2" required></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="classState">Estado</label>
+                        <select id="classState" class="form-control">
+                            <option value="pendiente">Pendiente</option>
+                            <option value="completada">Completada</option>
+                            <option value="cancelada">Cancelada</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Horarios</label>
+                        <div id="scheduleContainer"></div>
+                        <button type="button" id="addScheduleBtn" class="btn btn-sm btn-secondary mt-2">
+                            <i class="fas fa-plus"></i> Agregar Horario
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" id="saveClassBtn" class="btn btn-primary">Guardar</button>
+                <button type="button" id="deleteClassBtn" class="btn btn-danger">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Plantilla para horarios -->
+<script id="scheduleTemplate" type="text/x-handlebars-template">
+    <div class="schedule-item input-group mb-2">
+        <input type="datetime-local" class="form-control schedule-input" required>
+        <div class="input-group-append">
+            <button class="btn btn-outline-danger remove-schedule" type="button">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+</script>
+{% endblock %}
+
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.7/dist/handlebars.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Inicializar calendario
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'es',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: "{{ url_for('classes_blueprint.dataClasses') }}",
+        eventClick: function(info) {
+            loadClass(info.event.id);
+        },
+        dateClick: function(info) {
+            newClass(info.dateStr);
+        },
+        eventClassNames: function(arg) {
+            return ['fc-event-' + arg.event.extendedProps.state];
+        }
+    });
+    calendar.render();
+
+    // Inicializar select2
+    //$('.select2').select2();
+
+    // Compilar plantilla de horarios
+    const scheduleTemplate = Handlebars.compile($('#scheduleTemplate').html());
+
+    // Cargar estudiantes e instructores
+    function loadSelectOptions() {
+        return $.when(
+            $.get("{{ url_for('classes_blueprint.get_students') }}", function(students) {
+                $('#studentSelect').empty().append('<option value=""></option>');
+                students.forEach(s => {
+                    $('#studentSelect').append(`<option value="${s._id}">${s.name}</option>`);
+                });
+            }),
+    
+            $.get("{{ url_for('classes_blueprint.get_teachers') }}", function(teachers) {
+                $('#teacherSelect').empty().append('<option value=""></option>');
+                teachers.forEach(t => {
+                    $('#teacherSelect').append(`<option value="${t._id}">${t.name}</option>`);
+                });
+            })
+        );
+    }
+    
+
+    // Agregar campo de horario
+    function addScheduleField(datetime = '') {
+        const $field = $(scheduleTemplate());
+        if (datetime) $field.find('input').val(datetime);
+        $('#scheduleContainer').append($field);
+    }
+
+    // Nuevo clase
+    function newClass(dateStr = null) {
+        $('#modalTitle').text('Nueva Clase de Natación');
+        $('#classForm')[0].reset();
+        $('#classId').val('');
+        $('#scheduleContainer').empty();
+        $('#deleteClassBtn').hide();
+        
+        if (dateStr) {
+            const date = new Date(dateStr);
+            const datetime = date.toISOString().slice(0, 16);
+            addScheduleField(datetime);
+        } else {
+            addScheduleField();
+        }
+        
+        loadSelectOptions();
+        $('#classModal').modal('show');
+    }
+
+    // Cargar clase existente
+    function loadClass(classId) {
+        $.get("{{ url_for('classes_blueprint.get_class', id='') }}" + classId, function(cls) {
+            $('#modalTitle').text('Editar Clase de Natación');
+            $('#classId').val(cls._id);
+            $('#classState').val(cls.state);
+            $('#scheduleContainer').empty();
+            
+            cls.schedule.forEach(s => {
+                const date = new Date(s);
+                addScheduleField(date.toISOString().slice(0, 16));
+            });
+            
+            loadSelectOptions().then(() => {
+                $('#studentSelect').val(cls.student_id).trigger('change');
+                $('#teacherSelect').val(cls.teacher_id).trigger('change');
+                $('#deleteClassBtn').show();
+                $('#classModal').modal('show');
+            });
+        }).fail(() => {
+            Swal.fire('Error', 'No se pudo cargar la clase', 'error');
+        });
+    }
+
+    // Guardar clase
+    function saveClass() {
+        const classId = $('#classId').val();
+        const schedules = [];
+        
+        $('.schedule-input').each(function() {
+            if ($(this).val()) schedules.push($(this).val());
+        });
+        
+        if (!schedules.length) {
+            Swal.fire('Error', 'Agregue al menos un horario', 'error');
+            return;
+        }
+        
+        const data = {
+            id: classId,
+            student_id: $('#studentSelect').val(),
+            teacher_id: $('#teacherSelect').val(),
+            state: $('#classState').val(),
+            schedule: schedules
+        };
+        
+        const url = classId ? 
+            "{{ url_for('classes_blueprint.update_class') }}" : 
+            "{{ url_for('classes_blueprint.create_class') }}";
+        
+        $.ajax({
+            url: url,
+            method: classId ? 'POST' : 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(res) {
+                Swal.fire('Éxito', res.message, 'success');
+                $('#classModal').modal('hide');
+                calendar.refetchEvents();
+            },
+            error: function(xhr) {
+                Swal.fire('Error', xhr.responseJSON.message || 'Error al guardar', 'error');
+            }
+        });
+    }
+
+    // Eliminar clase
+    function deleteClass() {
+        const classId = $('#classId').val();
+        
+        Swal.fire({
+            title: '¿Eliminar clase?',
+            text: "Esta acción no se puede deshacer",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, eliminar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: "{{ url_for('classes_blueprint.delete_class', id='') }}" + classId,
+                    method: 'DELETE',
+                    success: function(res) {
+                        Swal.fire('Eliminada', res.message, 'success');
+                        $('#classModal').modal('hide');
+                        calendar.refetchEvents();
+                    },
+                    error: function() {
+                        Swal.fire('Error', 'No se pudo eliminar', 'error');
+                    }
+                });
+            }
+        });
+    }
+
+    // Eventos
+    $('#addClassBtn').click(newClass);
+    $('#addScheduleBtn').click(() => addScheduleField());
+    $(document).on('click', '.remove-schedule', function() {
+        $(this).closest('.schedule-item').remove();
+    });
+    $('#saveClassBtn').click(saveClass);
+    $('#deleteClassBtn').click(deleteClass);
+
+    // Cargar opciones al iniciar
+    loadSelectOptions();
+});
+</script>
+{% endblock %}
