@@ -29,6 +29,16 @@
     }
     
     .select2-container { width: 100% !important; }
+
+    .modal-dialog {
+    max-width: 80% !important; /* Ancho más grande */
+    }
+
+    .modal-content {
+        max-height: 80vh; /* Hasta el 90% de la altura visible del navegador */
+        overflow-y: auto; /* Scroll vertical si se necesita */
+    }
+
 </style>
 {% endblock %}
 
@@ -44,9 +54,14 @@
                                 <div class="card">
                                     <div class="card-header">
                                         <h5>Calendario de Clases de Natación</h5>
-                                        <!-- <button id="addClassBtn" class="btn btn-primary">
-                                            <i class="fas fa-plus"></i> Nueva Clase
-                                        </button> -->
+                                        <button id="showClassBtn" class="btn btn-primary">
+                                            <i class="fas fa-plus"></i> ver lista de clases
+                                        </button>
+                                        <button id="showClassBtn" class="btn btn-warning">
+                                            <a href="/list_clients_classes">
+                                            <i class="fas fa-plus"></i> ver lista cantidad de clases por estudiante
+                                            </a>
+                                        </button>
                                     </div>
                                     <div class="card-body">
                                         <div id="calendar"></div>
@@ -109,6 +124,41 @@
         </div>
     </div>
 </div>
+<!-- Modal para clases (más ancho y con tabla) -->
+<div class="modal fade" id="classModalLista" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document"> <!-- modal-xl para hacerlo más largo -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Clases de Natación Programadas</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <table id="clasesTable" class="table table-bordered table-striped" width="100%">
+                    <thead class="table-primary text-center">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Instructor</th>
+                            <th>Teléfono Instructor</th>
+                            <th>Experiencia</th>
+                            <th>Estudiante</th>
+                            <th>Teléfono Estudiante</th>
+                            <th>Edad Estudiante</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- Plantilla para horarios -->
 <script id="scheduleTemplate" type="text/x-handlebars-template">
@@ -314,6 +364,40 @@ $(document).ready(function() {
 
     // Cargar opciones al iniciar
     loadSelectOptions();
+
+
+    let clasesTable;
+
+$('#showClassBtn').on('click', function () {
+    $('#classModalLista').modal('show');
+
+    if ($.fn.DataTable.isDataTable('#clasesTable')) {
+        clasesTable.ajax.reload();
+    } else {
+        clasesTable = $('#clasesTable').DataTable({
+            ajax: {
+                url: "/classes/with-teachers",
+                dataSrc: "data"
+            },
+                columns: [
+                    { data: "datetime_raw" },  // Este debe coincidir
+                    { data: "class_state" },
+                    { data: "teacher_name" },
+                    { data: "teacher_phone" },
+                    { data: "experience_years" },
+                    { data: "student_name" },
+                    { data: "student_phone" },
+                    { data: "student_age" }
+                ],
+
+            responsive: true,
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+            }
+        });
+    }
+});
+
 });
 </script>
 {% endblock %}

@@ -159,3 +159,194 @@ def delete_class(id):
         return jsonify({'success': True, 'message': 'Clase eliminada correctamente'})
     except errors.InvalidId:
         return jsonify({'success': False, 'message': 'ID no válido'}), 400
+    
+
+
+
+
+@blueprint.route("/classes/with-teachers", methods=["GET"])
+def get_classes_with_teachers():
+    pipeline = [
+        # Lookup para traer info del teacher
+        {
+            "$lookup": {
+                "from": "teachers",
+                "localField": "teacher_id",
+                "foreignField": "_id",
+                "as": "teacher_info"
+            }
+        },
+        # Lookup para traer info del student (clients)
+        {
+            "$lookup": {
+                "from": "clients",
+                "localField": "student_id",
+                "foreignField": "_id",
+                "as": "student_info"
+            }
+        },
+        # Unwind para schedule, teacher_info y student_info
+        { "$unwind": "$schedule" },
+        { "$unwind": "$teacher_info" },
+        { "$unwind": "$student_info" },
+        # Proyección de los campos que quieres enviar
+        {
+            "$project": {
+                "_id": 0,
+                "class_state": "$state",
+                "datetime_raw": "$schedule",  # aquí estará como un string tipo "2025-05-20T08:00"
+
+                "teacher_name": {
+                    "$concat": [
+                        "$teacher_info.first_name", " ",
+                        "$teacher_info.second_name", " ",
+                        "$teacher_info.first_last_name", " ",
+                        "$teacher_info.second_last_name"
+                    ]
+                },
+                "teacher_dni": "$teacher_info.dni",
+                "teacher_phone": "$teacher_info.phone",
+                "experience_years": "$teacher_info.experience_years",
+
+                "student_name": {
+                    "$concat": [
+                        "$student_info.first_name", " ",
+                        "$student_info.second_name", " ",
+                        "$student_info.first_last_name", " ",
+                        "$student_info.second_last_name"
+                    ]
+                },
+                "student_dni": "$student_info.dni",
+                "student_phone": "$student_info.phone",
+                "student_age": "$student_info.age"
+            }
+        }
+
+    ]
+
+    results = list(mongo.db.swimming_classes.aggregate(pipeline))
+    print(results)  # Esto en consola para verificar la estructura
+    return jsonify({"data": results})
+
+
+@blueprint.route("/classes/filter", methods=["POST"])
+def filter_classes():
+    data = request.get_json()
+    filters = data.get("filters", {})
+
+    pipeline = []
+
+    if "match" in filters:
+        pipeline.append({ "$match": filters["match"] })
+
+    pipeline += [
+        {
+            "$lookup": {
+                "from": "teachers",
+                "localField": "teacher_id",
+                "foreignField": "_id",
+                "as": "teacher_info"
+            }
+        },
+        {
+            "$lookup": {
+                "from": "clients",
+                "localField": "student_id",
+                "foreignField": "_id",
+                "as": "student_info"
+            }
+        },
+        { "$unwind": "$schedule" },
+        { "$unwind": "$teacher_info" },
+        { "$unwind": "$student_info" }
+    ]
+
+    if "sort" in filters:
+        pipeline.append({ "$sort": filters["sort"] })
+
+    if "skip" in filters:
+        pipeline.append({ "$skip": int(filters["skip"]) })
+
+    if "limit" in filters:
+        pipeline.append({ "$limit": int(filters["limit"]) })
+
+    pipeline.append({
+        "$project": {
+            "_id": 0,
+            "class_state": "$state",
+            "date": "$schedule.date",
+            "time": "$schedule.time",
+
+            "teacher_name": {
+                "$concat": [
+                    "$teacher_info.first_name", " ",
+                    "$teacher_info.second_name", " ",
+                    "$teacher_info.first_last_name", " ",
+                    "$teacher_info.second_last_name"
+                ]
+            },
+            "teacher_dni": "$teacher_info.dni",
+            "teacher_phone": "$teacher_info.phone",
+            "experience_years": "$teacher_info.experience_years",
+
+            "student_name": {
+                "$concat": [
+                    "$student_info.first_name", " ",
+                    "$student_info.second_name", " ",
+                    "$student_info.first_last_name", " ",
+                    "$student_info.second_last_name"
+                ]
+            },
+            "student_dni": "$student_info.dni",
+            "student_phone": "$student_info.phone",
+            "student_age": "$student_info.age"
+        }
+    })
+
+    results = list(mongo.db.swimming_classes.aggregate(pipeline))
+    return jsonify({"data": results})
+
+
+@blueprint.route('/list_clients_classes', methods=['GET'])
+@login_required
+def list_clients_classes():
+    return render_template('classes/list_clients_classes.html',segment='estudiante')
+
+@blueprint.route("/clients/with-class-count", methods=["GET"])
+def clients_with_class_count():
+    pipeline = [
+        {
+            "$addFields": {
+                "client_id_str": { "$toString": "$_id" }
+            }
+        },
+        {
+            "$lookup": {
+                "from": "swimming_classes",  # CORRECTO
+                "localField": "client_id_str",
+                "foreignField": "student_id",
+                "as": "client_classes"
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "name": {
+                    "$concat": [
+                        "$first_name", " ",
+                        "$second_name", " ",
+                        "$first_last_name", " ",
+                        "$second_last_name"
+                    ]
+                },
+                "dni": 1,
+                "phone": 1,
+                "email": 1,
+                "age": 1,
+                "total_classes": { "$size": "$client_classes" }  # CORREGIDO
+            }
+        }
+    ]
+
+    results = list(mongo.db.clients.aggregate(pipeline))
+    return jsonify({ "data": results })

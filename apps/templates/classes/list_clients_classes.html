@@ -1,0 +1,163 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Lista de Clientes {% endblock %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+<!-- [ Main Content ] start -->
+<div class="pcoded-main-container">
+    <div class="pcoded-wrapper">
+        <div class="pcoded-content">
+            <div class="pcoded-inner-content">
+                <!-- [ breadcrumb ] start -->
+                <div class="page-header">
+                    <div class="page-block">
+                        <!-- <div class="row align-items-center">
+                                <div class="col-md-12">
+                                    <div class="page-header-title">
+                                        <h5 class="m-b-10">Sample Page</h5>
+                                    </div>
+                                    <ul class="breadcrumb">
+                                        <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
+                                        <li class="breadcrumb-item"><a href="javascript:">Sample Page</a></li>
+                                    </ul>
+                                </div>
+                            </div> -->
+                    </div>
+                </div>
+                <!-- [ breadcrumb ] end -->
+                <div class="main-body">
+                    <div class="page-wrapper">
+                        <!-- [ Main Content ] start -->
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <div class="table-responsive">
+                                    
+                                    <div id="aggResult" class="mt-3 alert alert-secondary" style="display:none;"></div>
+                                    
+                                    <table id="miTabla" class="display responsive nowrap" width="100%">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>DNI</th>
+                                                <th>Teléfono</th>
+                                                <th>Email</th>
+                                                <th>Edad</th>
+                                                <th>Total Clases</th>
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- [ Main Content ] end -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- [ Main Content ] end -->
+
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}
+
+
+<script>
+    $(document).ready(function () {
+
+        $('#miTabla thead tr')
+            .clone(true)
+            .addClass('filters')
+            .appendTo('#miTabla thead');
+
+        var table = $('#miTabla').DataTable({
+
+            "ajax": {
+                "url": "{{ url_for('classes_blueprint.clients_with_class_count') }}",
+                "dataType": "json",
+            },
+
+            // Ruta para cargar los datos a través de AJAX
+        'columns': [
+            { data: "name" },
+            { data: "dni" },
+            { data: "phone" },
+            { data: "email" },
+            { data: "age" },
+            { data: "total_classes" }
+        ],
+            "responsive": true, // Enable responsive feature
+            "orderCellsTop": true,
+            "fixedHeader": true,
+            dom: 'Bfrtip',
+            buttons: [
+                'excel'
+            ],
+
+            "initComplete": function () {
+                var api = this.api();
+
+                // For each column
+                api
+                    .columns()
+                    .eq(0)
+                    .each(function (colIdx) {
+                        // Set the header cell to contain the input element
+                        var cell = $('.filters th').eq(
+                            $(api.column(colIdx).header()).index()
+                        );
+                        var title = $(cell).text();
+                        $(cell).html('<input type="text" placeholder="' + title + '" />');
+
+                        // On every keypress in this input
+                        $(
+                            'input',
+                            $('.filters th').eq($(api.column(colIdx).header()).index())
+                        )
+                            .off('keyup change')
+                            .on('change', function (e) {
+                                // Get the search value
+                                $(this).attr('title', $(this).val());
+                                var regexr = '({search})'; //$(this).parents('th').find('select').val();
+
+                                var cursorPosition = this.selectionStart;
+                                // Search the column for that value
+                                api
+                                    .column(colIdx)
+                                    .search(
+                                        this.value != ''
+                                            ? regexr.replace('{search}', '(((' + this.value + ')))')
+                                            : '',
+                                        this.value != '',
+                                        this.value == ''
+                                    )
+                                    .draw();
+                            })
+                            .on('keyup', function (e) {
+                                e.stopPropagation();
+
+                                $(this).trigger('change');
+                                $(this)
+                                    .focus()[0]
+                                    .setSelectionRange(cursorPosition, cursorPosition);
+                            });
+                    });
+            },
+
+        });
+
+
+    });
+
+
+    
+</script>
+{% endblock javascripts %}

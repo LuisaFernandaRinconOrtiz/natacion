@@ -17,17 +17,28 @@
                 <!-- [ breadcrumb ] start -->
                 <div class="page-header">
                     <div class="page-block">
-                        <!-- <div class="row align-items-center">
-                                <div class="col-md-12">
-                                    <div class="page-header-title">
-                                        <h5 class="m-b-10">Sample Page</h5>
-                                    </div>
-                                    <ul class="breadcrumb">
-                                        <li class="breadcrumb-item"><a href="/"><i class="feather icon-home"></i></a></li>
-                                        <li class="breadcrumb-item"><a href="javascript:">Sample Page</a></li>
-                                    </ul>
-                                </div>
-                            </div> -->
+                        <div class="row my-3">
+                            <div class="col-md-3">
+                                <input type="text" id="filtroNombre" class="form-control" placeholder="Nombre contiene...">
+                            </div>
+                            <div class="col-md-3">
+                                <select id="ordenarPor" class="form-control">
+                                    <option value="">Ordenar por</option>
+                                    <option value="first_name">Nombre</option>
+                                    <option value="experience_years">Años experiencia</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" id="limite" class="form-control" placeholder="Limitar resultados">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" id="saltar" class="form-control" placeholder="Omitir resultados">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary" onclick="filtrarProfesores()">Filtrar</button>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
                 <!-- [ breadcrumb ] end -->
@@ -72,6 +83,8 @@
 
 
 <script>
+    var table;
+
     $(document).ready(function () {
 
         $('#miTabla thead tr')
@@ -79,7 +92,7 @@
             .addClass('filters')
             .appendTo('#miTabla thead');
 
-        var table = $('#miTabla').DataTable({
+        table = $('#miTabla').DataTable({
 
             "ajax": {
                 "url": "{{ url_for('teachers_blueprint.dataTeachers') }}",
@@ -175,8 +188,45 @@
 
         });
 
-
     });
+function filtrarProfesores() {
+    const match = {};
+    const nombre = $("#filtroNombre").val();
+    const experiencia = $("#filtroExperiencia").val(); // ← nuevo
+
+    const ordenar = $("#ordenarPor").val();
+    const limite = $("#limite").val();
+    const saltar = $("#saltar").val();
+
+    if (nombre) {
+        match.first_name = { $regex: nombre, $options: 'i' };
+    }
+
+    if (experiencia) {
+        match.experience_years = { $gte: parseInt(experiencia) }; // ← nuevo
+    }
+
+    const filtro = {};
+    if (Object.keys(match).length > 0) filtro.match = match;
+    if (ordenar) filtro.sort = { [ordenar]: 1 };
+    if (limite) filtro.limit = parseInt(limite);
+    if (saltar) filtro.skip = parseInt(saltar);
+
+    $.ajax({
+        url: "{{ url_for('teachers_blueprint.dataTeachersFiltered') }}",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(filtro),
+        success: function (response) {
+            //onsole.log(response.data);
+            //table.clear().draw();
+            //table.rows.add(response.data).draw();
+            //table.clear().rows.add(response.data).draw();
+            table.order([]).draw();
+            table.clear().rows.add(response.data).draw()
+        }
+    });
+}
 
 
 
@@ -273,6 +323,8 @@
 
 
     });
+
+    
 
     function mostrarCuadroDialogoEdicion(dataClient, id) {
         Swal.fire({
@@ -384,6 +436,7 @@
             }
         })
     });
+
 
 
 </script>
