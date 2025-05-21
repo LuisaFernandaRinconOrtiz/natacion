@@ -11,7 +11,7 @@ class Teachers(UserMixin):
         self.dni = dni  # Puede ser DNI o cédula
         self.state = True  # Activo por defecto
         self.phone = phone
-        self.experience_years = experience  # Años de experiencia
+        self.experience_years = int(experience or 0) # Años de experiencia
 
     def save(self):
         """Guarda el profesor en MongoDB"""

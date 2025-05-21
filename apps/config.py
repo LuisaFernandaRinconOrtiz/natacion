@@ -11,7 +11,8 @@ class Config(object):
     SECRET_KEY  = 'zjyz0BAg3ZKp0HYDo0s2Y2WvZPtASXPs'
 
     # Configuración de MongoDB - Usar la IP de la máquina Windows
-    MONGO_URI = 'mongodb://172.17.96.1:27017/natacion'
+    # MONGO_URI = 'mongodb://172.17.96.1:27017/natacion'
+    MONGO_URI = 'mongodb://172.22.64.1:27017/natacion'
 
 class ProductionConfig(Config):
     DEBUG = False
