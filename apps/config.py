@@ -6,6 +6,7 @@ class Config(object):
 
     # Assets Management
     ASSETS_ROOT = '/static/assets' 
+    ASSETS_INDEX = '/static/assets/natacion_index' 
     
     # Set up the App SECRET_KEY
     SECRET_KEY  = 'zjyz0BAg3ZKp0HYDo0s2Y2WvZPtASXPs'

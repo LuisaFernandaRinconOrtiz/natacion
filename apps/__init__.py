@@ -22,7 +22,7 @@ def register_extensions(app):
 
 def register_blueprints(app):
     """Registra los Blueprints"""
-    for module_name in ('authentication', 'home', 'clients','teachers','classes'):
+    for module_name in ('authentication', 'home', 'clients','teachers','classes','index'):
         module = import_module(f'apps.{module_name}.routes')
         app.register_blueprint(module.blueprint)
 

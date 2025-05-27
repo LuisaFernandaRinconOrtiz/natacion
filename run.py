@@ -32,6 +32,7 @@ if DEBUG:
     app.logger.info('Page Compression = ' + ('FALSE' if DEBUG else 'TRUE'))
     app.logger.info('MONGO_URI        = ' + app_config.MONGO_URI)
     app.logger.info('ASSETS_ROOT      = ' + app_config.ASSETS_ROOT)
+    app.logger.info('ASSETS_ROOT      = ' + app_config.ASSETS_INDEX)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=True)

@@ -12,9 +12,9 @@ from apps.authentication.models import Users
 from apps.authentication.util import verify_pass
 
 
-@blueprint.route('/')
-def route_default():
-    return redirect(url_for('authentication_blueprint.login'))
+# @blueprint.route('/')
+# def route_default():
+#     return redirect(url_for('authentication_blueprint.login'))
 
 
 @blueprint.route('/login', methods=['GET', 'POST'])

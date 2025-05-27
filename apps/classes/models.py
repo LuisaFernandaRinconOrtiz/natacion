@@ -11,7 +11,7 @@ class SwimmingClass(UserMixin):
         :param schedule: Lista de horarios [{'date': 'YYYY-MM-DD', 'time': 'HH:MM'}].
         :param state: Estado de la clase ('pendiente', 'completada', 'cancelada').
         """
-        self.student_id = str(student_id)
+        self.student_id = ObjectId(student_id)
         self.teacher_id = ObjectId(teacher_id)
         self.schedule = schedule  # Lista de fechas y horas
         self.state = state  # Estado de la clase
