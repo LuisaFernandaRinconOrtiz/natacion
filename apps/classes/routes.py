@@ -236,10 +236,18 @@ def filter_classes():
 
     pipeline = []
 
+    # Si hay un $match lo agregamos primero
     if "match" in filters:
         pipeline.append({ "$match": filters["match"] })
 
     pipeline += [
+        # Convertimos el student_id string a ObjectId para el $lookup
+        {
+            "$addFields": {
+                "student_obj_id": { "$toObjectId": "$student_id" }
+            }
+        },
+        # Unimos con los profesores
         {
             "$lookup": {
                 "from": "teachers",
@@ -248,28 +256,33 @@ def filter_classes():
                 "as": "teacher_info"
             }
         },
+        # Unimos con los estudiantes (clientes)
         {
             "$lookup": {
                 "from": "clients",
-                "localField": "student_id",
+                "localField": "student_obj_id",
                 "foreignField": "_id",
                 "as": "student_info"
             }
         },
+        # Descomponemos los arrays
         { "$unwind": "$schedule" },
         { "$unwind": "$teacher_info" },
         { "$unwind": "$student_info" }
     ]
 
+    # Agregar ordenamiento si se solicita
     if "sort" in filters:
         pipeline.append({ "$sort": filters["sort"] })
 
+    # Agregar paginación si se solicita
     if "skip" in filters:
         pipeline.append({ "$skip": int(filters["skip"]) })
 
     if "limit" in filters:
         pipeline.append({ "$limit": int(filters["limit"]) })
 
+    # Proyección final
     pipeline.append({
         "$project": {
             "_id": 0,
@@ -303,8 +316,10 @@ def filter_classes():
         }
     })
 
+    # Ejecutar pipeline
     results = list(mongo.db.swimming_classes.aggregate(pipeline))
     return jsonify({"data": results})
+
 
 
 @blueprint.route('/list_clients_classes', methods=['GET'])
@@ -316,15 +331,10 @@ def list_clients_classes():
 def clients_with_class_count():
     pipeline = [
         {
-            "$addFields": {
-                "client_id_str": { "$toString": "$_id" }
-            }
-        },
-        {
             "$lookup": {
-                "from": "swimming_classes",  # CORRECTO
-                "localField": "client_id_str",
-                "foreignField": "student_id",
+                "from": "swimming_classes",
+                "localField": "_id",             # ya es ObjectId
+                "foreignField": "student_id",    # también es ObjectId
                 "as": "client_classes"
             }
         },
@@ -343,7 +353,7 @@ def clients_with_class_count():
                 "phone": 1,
                 "email": 1,
                 "age": 1,
-                "total_classes": { "$size": "$client_classes" }  # CORREGIDO
+                "total_classes": { "$size": "$client_classes" }
             }
         }
     ]
