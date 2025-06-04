@@ -261,35 +261,45 @@
     }
 
     // Función para enviar los datos mediante POST
-    function enviarDatosEnvio(datos) {
-        fetch("{{ url_for('clients_blueprint.create_client') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(datos),
-        })
-            .then(response => response.json())
-            .then(data => {
-                Swal.fire({
-                    title: data.message,
-                    icon: data.tipo
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.reload();
-                    }
-                });
-            })
-            .catch(error => {
-                Swal.fire({
-                    title: "Error al crear el cliente",
-                    icon: "error"
-                }).then(() => {
+function enviarDatosEnvio(datos) {
+    fetch("{{ url_for('clients_blueprint.create_client') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(datos),
+    })
+    .then(response => response.json()
+        .then(data => ({ status: response.status, body: data })))
+    .then(({ status, body }) => {
+        if (status === 200 && body.tipo === 'success') {
+            Swal.fire({
+                title: body.message,
+                icon: 'success'
+            }).then((result) => {
+                if (result.isConfirmed) {
                     window.location.reload();
-                });
-
+                }
             });
-    }
+        } else {
+            // Mostrar errores de validación si existen
+            let mensajes = body.errores ? body.errores.join('<br>') : body.message;
+            Swal.fire({
+                title: 'Error al crear cliente',
+                html: mensajes,
+                icon: 'error'
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            title: "Error al crear el cliente",
+            icon: "error"
+        }).then(() => {
+            window.location.reload();
+        });
+    });
+}
 
     $(document).on('click', '.editClient', function () {
         var id = $(this).data('id');
@@ -366,23 +376,36 @@
                     },
                     body: JSON.stringify(result.value),
                 })
-                    .then(response => response.json())
-                    .then(data => {
+                .then(response => response.json()
+                    .then(data => ({ status: response.status, body: data })))
+                .then(({ status, body }) => {
+                    if (status === 200 && body.tipo === 'success') {
                         Swal.fire({
-                            title: "Envio editado correctamente",
-                            icon: "success"
+                            title: body.message || "Cliente editado correctamente",
+                            icon: 'success'
+                        }).then(() => {
+                            window.location.reload();
                         });
-                        window.location.reload()
-                    })
-                    .catch(error => {
+                    } else {
+                        // Mostrar errores de validación si existen
+                        let mensajes = body.errores ? body.errores.join('<br>') : body.message || "Error al editar cliente";
                         Swal.fire({
-                            title: "Error al editar el envio",
-                            icon: "error"
+                            title: 'Error al editar cliente',
+                            html: mensajes,
+                            icon: 'error'
                         });
-                        window.location.reload()
-
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        title: "Error al editar el cliente",
+                        icon: "error"
+                    }).then(() => {
+                        window.location.reload();
                     });
+                });
             }
+
         });
     }
 

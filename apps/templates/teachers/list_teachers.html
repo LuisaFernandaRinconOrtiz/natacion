@@ -240,7 +240,7 @@ function filtrarProfesores() {
             <input id="second_last_name" class="swal2-input" placeholder="Segundo apellido (Opcional)" >
             <input id="dni" class="swal2-input" placeholder="Identificacion (Opcional)" >
             <input id="phone" class="swal2-input" placeholder="Telefono " >
-            <input id="experience" class="swal2-input" placeholder="experiencia " >
+            <input id="experience" class="swal2-input" type="number" placeholder="experiencia " >
             
           `,
             showCancelButton: true,
@@ -277,35 +277,44 @@ function filtrarProfesores() {
     }
 
     // Función para enviar los datos mediante POST
-    function enviarDatosEnvio(datos) {
-        fetch("{{ url_for('teachers_blueprint.create_teacher') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(datos),
-        })
-            .then(response => response.json())
-            .then(data => {
-                Swal.fire({
-                    title: data.message,
-                    icon: data.tipo
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        window.location.reload();
-                    }
-                });
-            })
-            .catch(error => {
-                Swal.fire({
-                    title: "Error al crear el cliente",
-                    icon: "error"
-                }).then(() => {
-                    window.location.reload();
-                });
-
+function enviarDatosEnvio(datos) {
+    fetch("{{ url_for('teachers_blueprint.create_teacher') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(datos),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.tipo === "error" && data.errores) {
+            Swal.fire({
+                title: "Errores en el formulario",
+                icon: "error",
+                html: `<ul style="text-align: left;">${data.errores.map(err => `<li>${err}</li>`).join('')}</ul>`
             });
-    }
+        } else {
+            Swal.fire({
+                title: data.message,
+                icon: data.tipo
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.reload();
+                }
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            title: "Error al crear el profesor",
+            icon: "error"
+        }).then(() => {
+            window.location.reload();
+        });
+    });
+}
+
+
 
     $(document).on('click', '.editClient', function () {
         var id = $(this).data('id');
@@ -380,21 +389,34 @@ function filtrarProfesores() {
                 })
                     .then(response => response.json())
                     .then(data => {
-                        Swal.fire({
-                            title: "Envio editado correctamente",
-                            icon: "success"
-                        });
-                        window.location.reload()
+                        if (data.tipo === "error" && data.errores) {
+                            Swal.fire({
+                                title: "Errores en el formulario",
+                                icon: "error",
+                                html: `<ul style="text-align: left;">${data.errores.map(err => `<li>${err}</li>`).join('')}</ul>`
+                            });
+                        } else if (data.tipo === "success") {
+                            Swal.fire({
+                                title: data.message,
+                                icon: "success"
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: "Error inesperado",
+                                icon: "error"
+                            });
+                        }
                     })
-                    .catch(error => {
-                        Swal.fire({
-                            title: "Error al editar el envio",
-                            icon: "error"
-                        });
-                        window.location.reload()
 
+                .catch(error => {
+                    Swal.fire({
+                        title: "Error al editar el profesor",
+                        icon: "error"
                     });
-            }
+                });
+              }
         });
     }
 

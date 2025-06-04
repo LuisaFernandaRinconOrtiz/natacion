@@ -9,10 +9,10 @@ from apps import mongo, login_manager
 from apps.authentication.util import hash_pass
 
 class Users(UserMixin):
-    def __init__(self, username, password, _id=None):
+    def __init__(self, username, password, _id=None, already_hashed=False):
         self.id = str(_id) if _id else None
         self.username = username
-        self.password = hash_pass(password)
+        self.password = password if already_hashed else hash_pass(password)
 
     def save(self):
         """ Guarda un usuario en MongoDB """
@@ -33,22 +33,21 @@ class Users(UserMixin):
 
     @classmethod
     def find_by_username(cls, username):
-        """ Busca un usuario por username """
         user_data = mongo.db.users.find_one({"username": username})
         if user_data:
-            return cls(user_data["username"], user_data["password"], _id=user_data["_id"])
+            return cls(user_data["username"], user_data["password"], _id=user_data["_id"], already_hashed=True)
         return None
 
     @classmethod
     def find_by_id(cls, _id):
-        """ Busca un usuario por ID """
         try:
             user_data = mongo.db.users.find_one({"_id": ObjectId(_id)})
             if user_data:
-                return cls(user_data["username"], user_data["password"], _id=user_data["_id"])
+                return cls(user_data["username"], user_data["password"], _id=user_data["_id"], already_hashed=True)
         except Exception:
             return None
         return None
+
 
     def __repr__(self):
         return str(self.username)

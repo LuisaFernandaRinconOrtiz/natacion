@@ -4,11 +4,80 @@ from flask_login import login_required
 from bson import ObjectId, errors
 from apps import mongo
 from apps.teachers.models import Teachers
+from cerberus import Validator
 
 @blueprint.route('/list_teachers')
 @login_required
 def list_teachers():
     return render_template('teachers/list_teachers.html', segment='profesor')
+
+teacher_schema = {
+    'first_name': {
+        'type': 'string',
+        'required': True,
+        'minlength': 2,
+        'maxlength': 30,
+        'empty': False,
+    },
+    'second_name': {
+        'type': 'string',
+        'required': False,
+        'maxlength': 30,
+        'nullable': True,
+    },
+    'first_last_name': {
+        'type': 'string',
+        'required': True,
+        'minlength': 2,
+        'maxlength': 30,
+        'empty': False,
+    },
+    'second_last_name': {
+        'type': 'string',
+        'required': False,
+        'maxlength': 30,
+        'nullable': True,
+    },
+    'dni': {
+        'type': 'string',
+        'required': False,
+        'regex': '^[0-9]+$',  # ✅ Solo números
+        'maxlength': 20,
+        'nullable': True,
+    },
+    'phone': {
+        'type': 'string',
+        'required': True,
+        'regex': '^[0-9]+$',  # ✅ Solo números
+        'minlength': 7,
+        'maxlength': 15,
+        'empty': False,
+    },
+    'experience': {
+        'type': 'integer',
+        'required': False,
+        'min': 0,
+        'coerce': int,
+    }
+}
+def traducir_errores(errors):
+    mensajes = []
+
+    for campo, errores_campo in errors.items():
+        for error in errores_campo:
+            if "min length" in error:
+                mensajes.append(f"'{campo}' debe tener al menos {error.split()[-1]} caracteres.")
+            elif "regex" in error:
+                mensajes.append(f"'{campo}' solo debe contener números.")
+            elif "required field" in error:
+                mensajes.append(f"El campo '{campo}' es obligatorio.")
+            elif "empty values not allowed" in error:
+                mensajes.append(f"El campo '{campo}' no puede estar vacío.")
+            else:
+                mensajes.append(f"Error en el campo '{campo}': {error}")
+
+    return mensajes
+
 
 @blueprint.route("/dataTeachers", methods=["GET"])
 @login_required
@@ -34,14 +103,23 @@ def dataTeachers():
 def create_teacher():
     data = request.get_json()
 
+    schema = teacher_schema
+    v = Validator(schema)
+
+    if not v.validate(data):
+        errores = traducir_errores(v.errors)
+        return jsonify({'tipo': 'error', 'message': 'Errores de validación', 'errores': errores}), 400
+
     existing_teacher = Teachers.find_by_phone(data.get('phone'))
     if existing_teacher:
-        return jsonify({'tipo': "error", 'message': 'Ya existe un profesor con ese número de teléfono'}), 400
+        return jsonify({'tipo': 'error', 'message': 'Ya existe un profesor con ese número de teléfono'}), 400
 
     teacher = Teachers(**data)
     teacher.save()
 
-    return jsonify({'tipo': "success", 'message': 'Profesor creado correctamente'}), 200
+    return jsonify({'tipo': 'success', 'message': 'Profesor creado correctamente'}), 200
+
+
 
 @blueprint.route('/get_teacher/<id>', methods=['GET'])
 @login_required
@@ -67,11 +145,19 @@ def edit_teacher():
     if not teacher_id:
         return jsonify({'tipo': 'error', 'message': 'ID no proporcionado'}), 400
 
+    # Desactivar "required" para actualización parcial
+    partial_schema = {key: {**value, 'required': False} for key, value in teacher_schema.items()}
+    v = Validator(partial_schema)
+    if not v.validate(data):
+        errores = traducir_errores(v.errors)
+        return jsonify({'tipo': 'error', 'message': 'Datos inválidos', 'errores': errores}), 400
+
     try:
         Teachers.update_teacher(ObjectId(teacher_id), data)
-        return jsonify({'success': True, 'message': 'Profesor actualizado correctamente'})
+        return jsonify({'tipo': 'success', 'message': 'Profesor actualizado correctamente'})
     except errors.InvalidId:
         return jsonify({'tipo': 'error', 'message': 'ID no válido'}), 400
+
 
 @blueprint.route('/edit_state_teacher', methods=['POST'])
 @login_required

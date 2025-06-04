@@ -63,3 +63,48 @@
     </div>
 
 {% endblock content %}
+
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form');
+    const passwordInput = form.querySelector('input[name="password"]');
+
+    form.addEventListener('submit', function (e) {
+        const password = passwordInput.value;
+
+        const minLength = /.{8,}/;
+        const hasUppercase = /[A-Z]/;
+        const hasLowercase = /[a-z]/;
+        const hasNumber = /[0-9]/;
+        const hasSymbol = /[\W_]/;
+
+        if (!minLength.test(password) || 
+            !hasUppercase.test(password) || 
+            !hasLowercase.test(password) || 
+            !hasNumber.test(password) || 
+            !hasSymbol.test(password)) {
+
+            e.preventDefault(); // Detiene el envío del formulario
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Contraseña no válida',
+                html: `
+                    <p>La contraseña debe contener al menos:</p>
+                    <ul style="text-align:left">
+                        <li>8 caracteres</li>
+                        <li>Una letra mayúscula</li>
+                        <li>Una letra minúscula</li>
+                        <li>Un número</li>
+                        <li>Un símbolo (ej: !@#\$%&*)</li>
+                    </ul>
+                `
+            });
+        }
+    });
+});
+</script>
+
+{% endblock javascripts %}
