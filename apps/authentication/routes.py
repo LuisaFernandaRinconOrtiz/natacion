@@ -38,7 +38,7 @@ def login():
         # Verificar contraseña
         if verify_pass(password, user.password):
             login_user(user)
-            return redirect(url_for('authentication_blueprint.route_default'))
+            return redirect(url_for('authentication_blueprint.login'))
 
         return render_template('accounts/login.html',
                                msg='Wrong username or password',
@@ -47,7 +47,7 @@ def login():
     if not current_user.is_authenticated:
         return render_template('accounts/login.html', form=login_form)
 
-    return redirect(url_for('home_blueprint.index'))
+    return redirect(url_for('clients_blueprint.list_clients'))
 
 
 @blueprint.route('/register', methods=['GET', 'POST'])

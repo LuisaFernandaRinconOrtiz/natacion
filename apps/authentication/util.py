@@ -1,7 +1,9 @@
+import bcrypt
+
 def hash_pass(password):
-    """Devuelve la contraseña en texto plano (no seguro)."""
-    return password  # Se guarda tal cual
+    """Genera un hash seguro a partir de la contraseña."""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 def verify_pass(password, stored_password):
-    """Compara la contraseña en texto plano."""
-    return password == stored_password  # Comparación directa
+    """Verifica que la contraseña ingresada coincide con el hash guardado."""
+    return bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8'))

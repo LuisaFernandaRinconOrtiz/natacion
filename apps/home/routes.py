@@ -9,11 +9,11 @@ from flask_login import login_required
 from jinja2 import TemplateNotFound
 
 
-# @blueprint.route('/login')
-# @login_required
-# def login():
+@blueprint.route('/clients')
+@login_required
+def clients():
 
-#     return redirect(url_for('clients_blueprint.list_clients'))
+    return redirect(url_for('clients_blueprint.list_clients'))
 
 
 
